@@ -92,10 +92,21 @@ class ResourceProxy(object):
             self._resource = self._api(self._type, self._id)
         return self._resource
 
+class UpdatedKeys(object):
+
+    _updated_keys = {}
+    def __init__(self):
+        pass
+
+    def add_key(self, item, value):
+        self._updated_keys[item] = value
+
+    def get_keys(self):
+        return self._updated_keys
+        #import pdb; pdb.set_trace()
 
 class Resource(object):
     """A fetched resource"""
-    _updated_keys = {}
     def __init__(self, resource, type, id, url, api):
 
         self._resource = resource
@@ -104,6 +115,7 @@ class Resource(object):
         self._url = url
         self._service = Service(self._url)
         self._api = api
+        self._keys = UpdatedKeys()
     def __repr__(self):
         return '<Resource %s: %s>' % (self._url, self._resource)
 
@@ -122,8 +134,13 @@ class Resource(object):
     def __contains__(self, attr):
         return attr in self._resource
 
+    def __setattr__(self, item, value):
+        super(Resource, self).__setattr__(item, value)
+        if not item.startswith('_'):
+            self._keys.add_key(item, value)
+
     def __setitem__(self, item, value):
-        self._updated_keys[item] = value
+        self._keys.add_key(item, value)
         self._resource[item] = value
 
 
@@ -146,7 +163,7 @@ class Resource(object):
         final_url = self._api._service.base_url + self._url
         headers = {'content-type': 'application/json'}
         try:
-            result = requests.patch(final_url, data=json.dumps(self._updated_keys), headers=headers)
+            result = requests.patch(final_url, data=json.dumps(self._keys.get_keys()), headers=headers)
             if result.status_code == 500:
                 return False, result.json['error_message']
             return True, result
@@ -155,7 +172,7 @@ class Resource(object):
         except requests.exceptions.InvalidURL:
             return False, "Invalid URL Schema"
         except Exception, e:
-            return False, 'Unknown Error Occured'
+            return False, e
 class ResourceListMixin(object):
 
     def values(self):
@@ -385,8 +402,9 @@ class Api(object):
     def _get(self, type=None, id=None, **kw):
         """Do a HTTP GET request"""
 
+        headers = {'content-type': 'application/json'}
         url = self._get_url(type, id, **kw)
-        response = requests.get(url, auth=self._auth)
+        response = requests.get(url, headers=headers, auth=self._auth)
         if response.status_code != 200:
             raise BadHttpStatus(response)
         raw_data = response.content
