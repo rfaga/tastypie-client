@@ -44,7 +44,7 @@ Delete a user ::
 Update a user ::
 
     >>> user = api.user(1)
-    >>> user['username'] = 'foobarbaz'
+    >>> user.username = 'foobarbaz'
     >>> user.save()
 
 Alternatively, you load both of them with an unique HTTP request ::
