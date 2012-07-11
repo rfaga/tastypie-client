@@ -39,13 +39,13 @@ Create a new user ::
 Delete a user ::
 
     >>> user = api.user(1)
-    >>> api.user.delete()
+    >>> user.delete()
 
 Update a user ::
 
     >>> user = api.user(1)
     >>> user['username'] = 'foobarbaz'
-    >>> api.user.save()
+    >>> user.save()
 
 Alternatively, you load both of them with an unique HTTP request ::
 
