@@ -2,7 +2,7 @@
 
 import pprint
 import urlparse
-import urllib
+import urllib,urllib2
 
 import requests
 
@@ -77,13 +77,14 @@ class ResourceProxy(object):
 
 class Resource(object):
     """A fetched resource"""
-
+    _updated_keys = {}
     def __init__(self, resource, type, id, url):
+
         self._resource = resource
         self._type = type
         self._id = id
         self._url = url
-
+        self._service = Service(self._url)
     def __repr__(self):
         return '<Resource %s: %s>' % (self._url, self._resource)
 
@@ -102,6 +103,22 @@ class Resource(object):
     def __contains__(self, attr):
         return attr in self._resource
 
+    def __setitem__(self, item, value):
+        self._updated_keys[item] = value
+        self._resource[item] = value
+
+    def save(self, api):
+        data = urllib.urlencode(self._updated_keys)
+        final_url = api._service.base_url + self._url
+        request = urllib2.Request(final_url, data)
+        request.add_header("Accept", "application/json")  
+        request.add_header("Content-Type", "application/json")  
+        request.get_method = lambda: 'DELETE'
+        #result_string = urllib2.urlopen(request).read()
+        result = requests.patch(final_url, self._updated_keys)
+        print result.content
+        import pdb; pdb.set_trace()
+        print "Save Called"
 
 class ResourceListMixin(object):
 
@@ -377,6 +394,7 @@ class Api(object):
             if proxy:
                 proxy._resource = resource
             return resource
+
 
     def many(self, type, *ids, **kw):
         """Get multiple resources (of the same type) with an unique request
