@@ -2,10 +2,13 @@
 
 import pprint
 import urlparse
-import urllib,urllib2
+import urllib
 
 import requests
-
+try:
+    import json
+except:
+    import simplejson as json
 from tastypie_client.serializers import JsonSerializer
 from tastypie_client.exceptions import \
     BadHttpStatus, ResourceTypeMissing, ResourceIdMissing, TooManyResources
@@ -78,13 +81,14 @@ class ResourceProxy(object):
 class Resource(object):
     """A fetched resource"""
     _updated_keys = {}
-    def __init__(self, resource, type, id, url):
+    def __init__(self, resource, type, id, url, api):
 
         self._resource = resource
         self._type = type
         self._id = id
         self._url = url
         self._service = Service(self._url)
+        self._api = api
     def __repr__(self):
         return '<Resource %s: %s>' % (self._url, self._resource)
 
@@ -107,19 +111,20 @@ class Resource(object):
         self._updated_keys[item] = value
         self._resource[item] = value
 
-    def save(self, api):
-        data = urllib.urlencode(self._updated_keys)
-        final_url = api._service.base_url + self._url
-        request = urllib2.Request(final_url, data)
-        request.add_header("Accept", "application/json")  
-        request.add_header("Content-Type", "application/json")  
-        request.get_method = lambda: 'DELETE'
-        #result_string = urllib2.urlopen(request).read()
-        result = requests.patch(final_url, self._updated_keys)
-        print result.content
-        import pdb; pdb.set_trace()
-        print "Save Called"
-
+    def save(self):
+        final_url = self._api._service.base_url + self._url
+        headers = {'content-type': 'application/json'}
+        try:
+            result = requests.patch(final_url, data=json.dumps(self._updated_keys), headers=headers)
+            if result.status_code == 500:
+                return False, result.json['error_message']
+            return True, result
+        except requests.exceptions.InvalidSchema:
+            return False, "Invalid URL Schema"
+        except requests.exceptions.InvalidURL:
+            return False, "Invalid URL Schema"
+        except Exception, e:
+            return False, 'Unknown Error Occured'
 class ResourceListMixin(object):
 
     def values(self):
@@ -341,7 +346,7 @@ class Api(object):
                 resource[attr] = ListProxy(value, self._service, self)
 
         type_, id_ = self._service.parse_resource_url(url)
-        return Resource(resource, type_, id_, url)
+        return Resource(resource, type_, id_, url, self)
 
     def _parse_resources(self, resources):
         return map(self._parse_resource, resources)
