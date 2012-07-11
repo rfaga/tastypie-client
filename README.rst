@@ -32,6 +32,18 @@ Get the first one ::
     >>> user.posts[0]
     Resource entry/1: {u'body': u'foo body', u'title': u'foo!', u'id': u'1', u'user': <ResourceProxy user/1>, u'pub_date': u'2012-04-29T08:55:08', u'slug': u'foo'}>
 
+Create a new user ::
+    >>> api.user.create(username='my_username')
+
+Delete a user ::
+    >>> user = api.user(1)
+    >>> api.user.delete()
+
+Update a user ::
+    >>> user = api.user(1)
+    >>> user['username'] = 'foobarbaz'
+    >>> api.user.save()
+
 Alternatively, you load both of them with an unique HTTP request ::
 
     >>> user.posts[:]

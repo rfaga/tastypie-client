@@ -38,6 +38,21 @@ class EndpointProxy(object):
     def find(self, **kw):
         return self._api.find(self._resource, **kw)
 
+    def create(self, *args, **kwargs):
+        final_url = self._api._service.base_url + self._endpoint_url
+        print final_url
+        headers = {'content-type': 'application/json'}
+        try:
+            result = requests.post(final_url, data=json.dumps(kwargs), headers=headers)
+            if result.status_code == 500:
+                return False, result.json['error_message']
+            return True, result.headers['location']
+        except requests.exceptions.InvalidSchema:
+            return False, "Invalid URL Schema"
+        except requests.exceptions.InvalidURL:
+            return False, "Invalid URL Schema"
+        except Exception, e:
+            return False, 'Unknown Error Occured'
 
 class ResourceProxy(object):
     """Proxy object to a resource
@@ -110,6 +125,22 @@ class Resource(object):
     def __setitem__(self, item, value):
         self._updated_keys[item] = value
         self._resource[item] = value
+
+
+    def delete(self):
+        final_url = self._api._service.base_url + self._url
+        headers = {'content-type': 'application/json'}
+        try:
+            result = requests.delete(final_url, headers=headers)
+            if result.status_code == 500:
+                return False, result.json['error_message']
+            return True, result
+        except requests.exceptions.InvalidSchema:
+            return False, "Invalid URL Schema"
+        except requests.exceptions.InvalidURL:
+            return False, "Invalid URL Schema"
+        except Exception, e:
+            return False, 'Unknown Error Occured'
 
     def save(self):
         final_url = self._api._service.base_url + self._url
