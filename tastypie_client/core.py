@@ -103,7 +103,6 @@ class UpdatedKeys(object):
 
     def get_keys(self):
         return self._updated_keys
-        #import pdb; pdb.set_trace()
 
 class Resource(object):
     """A fetched resource"""
