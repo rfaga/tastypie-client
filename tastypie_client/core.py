@@ -40,10 +40,9 @@ class EndpointProxy(object):
 
     def create(self, *args, **kwargs):
         final_url = self._api._service.base_url + self._endpoint_url
-        print final_url
         headers = {'content-type': 'application/json'}
         try:
-            result = requests.post(final_url, data=json.dumps(kwargs), headers=headers)
+            result = requests.post(final_url, data=json.dumps(kwargs), headers=headers, auth=self._api._auth)
             if result.status_code == 500:
                 return False, result.json['error_message']
             return True, result.headers['location']
@@ -147,7 +146,7 @@ class Resource(object):
         final_url = self._api._service.base_url + self._url
         headers = {'content-type': 'application/json'}
         try:
-            result = requests.delete(final_url, headers=headers)
+            result = requests.delete(final_url, headers=headers, auth=self._api._auth)
             if result.status_code == 500:
                 return False, result.json['error_message']
             return True, result
@@ -160,9 +159,11 @@ class Resource(object):
 
     def save(self):
         final_url = self._api._service.base_url + self._url
-        headers = {'content-type': 'application/json'}
+        #headers = {'content-type': 'application/json', 'Host': 'toolsdev2.dmz.scl3.mozilla.com'}
+        headers = {'content-type': 'application/json', 'Host': 'inventory.mozilla.org'}
         try:
-            result = requests.patch(final_url, data=json.dumps(self._keys.get_keys()), headers=headers)
+            encoded_data = json.dumps(self._keys.get_keys())
+            result = requests.patch(final_url, data=encoded_data,  headers=headers, allow_redirects=True, auth=self._api._auth)
             if result.status_code == 500:
                 return False, result.json['error_message']
             return True, result
@@ -377,7 +378,8 @@ class Api(object):
                     kw[key] = value.encode('utf-8')
             url += '?' + urllib.urlencode(kw)
         return url
-
+    def get_schema(self, resource):
+        return self._get(resource, 'schema')
     def _parse_resource(self, resource):
         """Parses a raw resource as returned by the service, replace related
            resource URLs with ResourceProxy objects.
@@ -448,6 +450,8 @@ class Api(object):
                 proxy._resource = resource
             return resource
 
+    def get_endpoints(self):
+        return self._endpoints
 
     def many(self, type, *ids, **kw):
         """Get multiple resources (of the same type) with an unique request
